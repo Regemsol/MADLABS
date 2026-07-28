@@ -10,10 +10,10 @@ class MadLabsApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mad Labs',
+      title: 'Food Delivery UI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
         useMaterial3: true,
       ),
       home: const HomePage(),
@@ -26,100 +26,159 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = [
-      const _FeatureCard(
-        title: 'Extensions',
-        subtitle: 'Browse downloadable tool extensions',
-        icon: Icons.extension_outlined,
-        color: Colors.indigo,
+    final categories = ['All', 'Pizza', 'Burger', 'Sushi', 'Dessert'];
+    final restaurants = [
+      _RestaurantCard(
+        name: 'Sunny Pizza',
+        tag: 'Fast • Pizza',
+        rating: '4.8',
+        color: Colors.orange,
       ),
-      const _FeatureCard(
-        title: 'Library',
-        subtitle: 'Explore saved assets and resources',
-        icon: Icons.library_books_outlined,
+      _RestaurantCard(
+        name: 'Bite House',
+        tag: 'Burgers • Fries',
+        rating: '4.6',
+        color: Colors.red,
+      ),
+      _RestaurantCard(
+        name: 'Sushi Lane',
+        tag: 'Japanese • Fresh',
+        rating: '4.9',
         color: Colors.teal,
       ),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mad Labs'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Welcome to Mad Labs',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'A simple starting point for managing extensions and your library.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: cards,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Deliver to', style: TextStyle(color: Colors.grey)),
+                      Text('Downtown Street', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  CircleAvatar(
+                    backgroundColor: Colors.orange.shade100,
+                    child: const Icon(Icons.person, color: Colors.orange),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.grey),
+                    SizedBox(width: 10),
+                    Expanded(child: Text('Search for food or restaurants')),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Popular categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 42,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final selected = index == 0;
+                    return Chip(
+                      label: Text(categories[index]),
+                      backgroundColor: selected ? Colors.orange : Colors.grey.shade100,
+                      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Restaurants', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: restaurants.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => restaurants[index],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
+class _RestaurantCard extends StatelessWidget {
+  const _RestaurantCard({
+    required this.name,
+    required this.tag,
+    required this.rating,
     required this.color,
   });
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
+  final String name;
+  final String tag;
+  final String rating;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: color.withOpacity(0.15),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.restaurant, color: color, size: 32),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(tag, style: const TextStyle(color: Colors.grey)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.orange, size: 16),
+                    const SizedBox(width: 4),
+                    Text(rating),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        ],
       ),
     );
   }
