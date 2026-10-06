@@ -1,16 +1,75 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const PracticalNineApp());
+const _firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+const _firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+const _firebaseMessagingSenderId =
+    String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+const _firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+const _firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
+const _firebaseObjectPath = 'practical9/practical9_sample.txt';
+
+bool get _hasFirebaseConfiguration =>
+    _firebaseApiKey.isNotEmpty &&
+    _firebaseAppId.isNotEmpty &&
+    _firebaseMessagingSenderId.isNotEmpty &&
+    _firebaseProjectId.isNotEmpty &&
+    _firebaseStorageBucket.isNotEmpty;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  var firebaseEnabled = false;
+  var firebaseMessage = 'Firebase Storage is available on the web target.';
+  if (kIsWeb) {
+    if (_hasFirebaseConfiguration) {
+      try {
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: _firebaseApiKey,
+            appId: _firebaseAppId,
+            messagingSenderId: _firebaseMessagingSenderId,
+            projectId: _firebaseProjectId,
+            storageBucket: _firebaseStorageBucket,
+          ),
+        );
+        firebaseEnabled = true;
+        firebaseMessage = 'Firebase Storage connected.';
+      } catch (error) {
+        firebaseMessage = 'Firebase initialization failed: $error';
+      }
+    } else {
+      firebaseMessage =
+          'Firebase is not configured. Pass your Firebase web app values using --dart-define.';
+    }
+  } else {
+    firebaseMessage = 'Firebase cloud sync is currently enabled for web only.';
+  }
+
+  runApp(
+    PracticalNineApp(
+      firebaseEnabled: firebaseEnabled,
+      firebaseMessage: firebaseMessage,
+    ),
+  );
 }
 
 class PracticalNineApp extends StatelessWidget {
-  const PracticalNineApp({super.key});
+  const PracticalNineApp({
+    super.key,
+    required this.firebaseEnabled,
+    required this.firebaseMessage,
+  });
+
+  final bool firebaseEnabled;
+  final String firebaseMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +80,23 @@ class PracticalNineApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const FileIoPage(),
+      home: FileIoPage(
+        firebaseEnabled: firebaseEnabled,
+        firebaseMessage: firebaseMessage,
+      ),
     );
   }
 }
 
 class FileIoPage extends StatefulWidget {
-  const FileIoPage({super.key});
+  const FileIoPage({
+    super.key,
+    required this.firebaseEnabled,
+    required this.firebaseMessage,
+  });
+
+  final bool firebaseEnabled;
+  final String firebaseMessage;
 
   @override
   State<FileIoPage> createState() => _FileIoPageState();
@@ -67,6 +136,16 @@ class _FileIoPageState extends State<FileIoPage> {
     return File('${directory.path}/$_fileName');
   }
 
+  Future<void> _saveLocalContent(String content) async {
+    if (kIsWeb) {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(_fileName, content);
+    } else {
+      final file = await _getSampleFile();
+      await file.writeAsString(content);
+    }
+  }
+
   Future<String> _readFile() async {
     try {
       if (kIsWeb) {
@@ -86,13 +165,7 @@ class _FileIoPageState extends State<FileIoPage> {
 
   Future<void> _writeFile() async {
     try {
-      if (kIsWeb) {
-        final preferences = await SharedPreferences.getInstance();
-        await preferences.setString(_fileName, _sampleContent);
-      } else {
-        final file = await _getSampleFile();
-        await file.writeAsString(_sampleContent);
-      }
+      await _saveLocalContent(_sampleContent);
       if (!mounted) return;
       setState(() {
         _fileContentFuture = _readFile();
@@ -110,6 +183,50 @@ class _FileIoPageState extends State<FileIoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not write $_fileName: $error')),
+      );
+    }
+  }
+
+  Future<void> _uploadToFirebase() async {
+    try {
+      final content = await _readFile();
+      await FirebaseStorage.instance.ref(_firebaseObjectPath).putString(
+            content,
+            format: PutStringFormat.raw,
+            metadata: SettableMetadata(contentType: 'text/plain'),
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File uploaded to Firebase Storage.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Firebase upload failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _downloadFromFirebase() async {
+    try {
+      final data = await FirebaseStorage.instance
+          .ref(_firebaseObjectPath)
+          .getData(1024 * 1024);
+      if (data == null) {
+        throw StateError('The Firebase object is empty or unavailable.');
+      }
+      await _saveLocalContent(utf8.decode(data));
+      if (!mounted) return;
+      setState(() {
+        _fileContentFuture = _readFile();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File downloaded from Firebase Storage.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Firebase download failed: $error')),
       );
     }
   }
@@ -175,8 +292,22 @@ class _FileIoPageState extends State<FileIoPage> {
                   icon: const Icon(Icons.refresh),
                   label: const Text('Read file'),
                 ),
+                FilledButton.tonalIcon(
+                  onPressed: widget.firebaseEnabled ? _uploadToFirebase : null,
+                  icon: const Icon(Icons.cloud_upload),
+                  label: const Text('Upload to Firebase'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: widget.firebaseEnabled ? _downloadFromFirebase : null,
+                  icon: const Icon(Icons.cloud_download),
+                  label: const Text('Download from Firebase'),
+                ),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(widget.firebaseMessage),
+            if (widget.firebaseEnabled)
+              const SelectableText('Firebase object: $_firebaseObjectPath'),
             const SizedBox(height: 20),
             Text('File contents', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
