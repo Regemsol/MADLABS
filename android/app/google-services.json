@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "717229137725",
+    "firebase_url": "https://web-app-bf037-default-rtdb.firebaseio.com",
+    "project_id": "web-app-bf037",
+    "storage_bucket": "web-app-bf037.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717229137725:android:357d67ae4510887e036f54",
+        "android_client_info": {
+          "package_name": "com.example.madlabs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaJGAtIbOOzUmB2zx9g7RBNTFdocjdueo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
